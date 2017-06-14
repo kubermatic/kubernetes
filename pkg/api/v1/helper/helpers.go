@@ -23,11 +23,14 @@ import (
 
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	"k8s.io/api/core/v1"
 	"k8s.io/kubernetes/pkg/api"
 	"k8s.io/kubernetes/pkg/api/helper"
 )
+
+const kubernetesServiceName = "kubernetes"
 
 // IsOpaqueIntResourceName returns true if the resource name has the opaque
 // integer resource prefix.
@@ -49,6 +52,16 @@ func OpaqueIntResourceName(name string) v1.ResourceName {
 // the objective is not to perform validation here
 func IsServiceIPSet(service *v1.Service) bool {
 	return service.Spec.ClusterIP != v1.ClusterIPNone && service.Spec.ClusterIP != ""
+}
+
+// IsMasterService will check of the given service is a master service
+func IsMasterService(masterNamespace string, masterServices sets.String, service *v1.Service) bool {
+	for s, _ := range masterServices {
+		if service.Namespace == masterNamespace && s == service.Name {
+			return true
+		}
+	}
+	return false
 }
 
 // this function aims to check if the service's cluster IP is requested or not

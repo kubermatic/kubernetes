@@ -129,6 +129,8 @@ type Config struct {
 	ExtraEndpointPorts []api.EndpointPort
 	// If non-zero, the "kubernetes" services uses this port as NodePort.
 	KubernetesServiceNodePort int
+	// If non-empty, the "kubernetes" services uses this name as externalName.
+	KubernetesServiceExternalName string
 
 	// Number of masters running; all masters must be started with the
 	// same value for this field. (Numbers > 1 currently untested.)
