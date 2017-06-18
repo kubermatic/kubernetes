@@ -54,17 +54,18 @@ type ServerRunOptions struct {
 	StorageSerialization    *kubeoptions.StorageSerializationOptions
 	APIEnablement           *kubeoptions.APIEnablementOptions
 
-	AllowPrivileged           bool
-	EnableLogsHandler         bool
-	EventTTL                  time.Duration
-	KubeletConfig             kubeletclient.KubeletClientConfig
-	KubernetesServiceNodePort int
-	MasterCount               int
-	MaxConnectionBytesPerSec  int64
-	ServiceClusterIPRange     net.IPNet // TODO: make this a list
-	ServiceNodePortRange      utilnet.PortRange
-	SSHKeyfile                string
-	SSHUser                   string
+	AllowPrivileged               bool
+	EnableLogsHandler             bool
+	EventTTL                      time.Duration
+	KubeletConfig                 kubeletclient.KubeletClientConfig
+	KubernetesServiceNodePort     int
+	KubernetesServiceExternalName string
+	MasterCount                   int
+	MaxConnectionBytesPerSec      int64
+	ServiceClusterIPRange         net.IPNet // TODO: make this a list
+	ServiceNodePortRange          utilnet.PortRange
+	SSHKeyfile                    string
+	SSHUser                       string
 
 	ProxyClientCertFile string
 	ProxyClientKeyFile  string
@@ -167,6 +168,10 @@ func (s *ServerRunOptions) AddFlags(fs *pflag.FlagSet) {
 		"If non-zero, the Kubernetes master service (which apiserver creates/maintains) will be "+
 		"of type NodePort, using this as the value of the port. If zero, the Kubernetes master "+
 		"service will be of type ClusterIP.")
+
+	fs.StringVar(&s.KubernetesServiceExternalName, "kubernetes-service-external-name", s.KubernetesServiceExternalName, ""+
+		"If non-empty, the Kubernetes master service (which apiserver creates/maintains) will be "+
+		"of type ExternalName, using this as the value of the externalName.")
 
 	fs.IPNetVar(&s.ServiceClusterIPRange, "service-cluster-ip-range", s.ServiceClusterIPRange, ""+
 		"A CIDR notation IP range from which to assign service cluster IPs. This must not "+
