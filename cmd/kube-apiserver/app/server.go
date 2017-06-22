@@ -315,7 +315,7 @@ func CreateKubeAPIServerConfig(s *options.ServerRunOptions, nodeTunneler tunnele
 
 		ServiceIPRange:       serviceIPRange,
 		APIServerServiceIP:   apiServerServiceIP,
-		APIServerServicePort: 443,
+		APIServerServicePort: s.APIServerServicePort,
 
 		ServiceNodePortRange:          s.ServiceNodePortRange,
 		KubernetesServiceNodePort:     s.KubernetesServiceNodePort,

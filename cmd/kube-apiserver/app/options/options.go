@@ -58,6 +58,7 @@ type ServerRunOptions struct {
 	EnableLogsHandler             bool
 	EventTTL                      time.Duration
 	KubeletConfig                 kubeletclient.KubeletClientConfig
+	APIServerServicePort          int
 	KubernetesServiceNodePort     int
 	KubernetesServiceExternalName string
 	MasterCount                   int
@@ -111,6 +112,7 @@ func NewServerRunOptions() *ServerRunOptions {
 			HTTPTimeout: time.Duration(5) * time.Second,
 		},
 		ServiceNodePortRange: DefaultServiceNodePortRange,
+		APIServerServicePort: 443,
 	}
 	// Overwrite the default for storage data format.
 	s.Etcd.DefaultStorageMediaType = "application/vnd.kubernetes.protobuf"
@@ -172,6 +174,9 @@ func (s *ServerRunOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&s.KubernetesServiceExternalName, "kubernetes-service-external-name", s.KubernetesServiceExternalName, ""+
 		"If non-empty, the Kubernetes master service (which apiserver creates/maintains) will be "+
 		"of type ExternalName, using this as the value of the externalName.")
+
+	fs.IntVar(&s.APIServerServicePort, "apiserver-service-port", s.APIServerServicePort, ""+
+		"Port of the apiserver service.")
 
 	fs.IPNetVar(&s.ServiceClusterIPRange, "service-cluster-ip-range", s.ServiceClusterIPRange, ""+
 		"A CIDR notation IP range from which to assign service cluster IPs. This must not "+
