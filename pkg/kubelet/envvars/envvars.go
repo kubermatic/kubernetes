@@ -34,16 +34,17 @@ func FromServices(services []*v1.Service) []v1.EnvVar {
 	for i := range services {
 		service := services[i]
 
-		// ignore services where ClusterIP is "None" or empty
-		// the services passed to this method should be pre-filtered
-		// only services that have the cluster IP set should be included here
-		if !v1helper.IsServiceIPSet(service) {
-			continue
-		}
-
 		// Host
 		name := makeEnvVariableName(service.Name) + "_SERVICE_HOST"
-		result = append(result, v1.EnvVar{Name: name, Value: service.Spec.ClusterIP})
+		if service.Spec.Type == v1.ServiceTypeExternalName {
+			result = append(result, v1.EnvVar{Name: name, Value: service.Spec.ExternalName})
+		} else {
+			// Skip services without a ClusterIP as those would end in an empty env var
+			if !v1helper.IsServiceIPSet(service) {
+				continue
+			}
+			result = append(result, v1.EnvVar{Name: name, Value: service.Spec.ClusterIP})
+		}
 		// First port - give it the backwards-compatible name
 		name = makeEnvVariableName(service.Name) + "_SERVICE_PORT"
 		result = append(result, v1.EnvVar{Name: name, Value: strconv.Itoa(int(service.Spec.Ports[0].Port))})

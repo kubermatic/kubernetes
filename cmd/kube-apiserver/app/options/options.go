@@ -54,17 +54,19 @@ type ServerRunOptions struct {
 	StorageSerialization    *kubeoptions.StorageSerializationOptions
 	APIEnablement           *kubeoptions.APIEnablementOptions
 
-	AllowPrivileged           bool
+	AllowPrivileged               bool
 	EnableLogsHandler         bool
-	EventTTL                  time.Duration
-	KubeletConfig             kubeletclient.KubeletClientConfig
-	KubernetesServiceNodePort int
-	MasterCount               int
-	MaxConnectionBytesPerSec  int64
-	ServiceClusterIPRange     net.IPNet // TODO: make this a list
-	ServiceNodePortRange      utilnet.PortRange
-	SSHKeyfile                string
-	SSHUser                   string
+	EventTTL                      time.Duration
+	KubeletConfig                 kubeletclient.KubeletClientConfig
+	APIServerServicePort          int
+	KubernetesServiceNodePort     int
+	KubernetesServiceExternalName string
+	MasterCount                   int
+	MaxConnectionBytesPerSec      int64
+	ServiceClusterIPRange         net.IPNet // TODO: make this a list
+	ServiceNodePortRange          utilnet.PortRange
+	SSHKeyfile                    string
+	SSHUser                       string
 
 	ProxyClientCertFile string
 	ProxyClientKeyFile  string
@@ -109,6 +111,7 @@ func NewServerRunOptions() *ServerRunOptions {
 			EnableHttps: true,
 			HTTPTimeout: time.Duration(5) * time.Second,
 		},
+		APIServerServicePort: 443,
 		ServiceNodePortRange: DefaultServiceNodePortRange,
 	}
 	// Overwrite the default for storage data format.
@@ -181,6 +184,13 @@ func (s *ServerRunOptions) AddFlags(fs *pflag.FlagSet) {
 		"Example: '30000-32767'. Inclusive at both ends of the range.")
 	fs.Var(&s.ServiceNodePortRange, "service-node-ports", "DEPRECATED: see --service-node-port-range instead")
 	fs.MarkDeprecated("service-node-ports", "see --service-node-port-range instead")
+
+	fs.StringVar(&s.KubernetesServiceExternalName, "kubernetes-service-external-name", s.KubernetesServiceExternalName, ""+
+		"If non-empty, the Kubernetes master service (which apiserver creates/maintains) will be "+
+		"of type ExternalName, using this as the value of the externalName.")
+
+	fs.IntVar(&s.APIServerServicePort, "apiserver-service-port", s.APIServerServicePort, ""+
+		"Port of the apiserver service.")
 
 	// Kubelet related flags:
 	fs.BoolVar(&s.KubeletConfig.EnableHttps, "kubelet-https", s.KubeletConfig.EnableHttps,

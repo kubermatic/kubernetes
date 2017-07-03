@@ -65,6 +65,8 @@ import (
 	"k8s.io/kubernetes/third_party/forked/golang/expansion"
 )
 
+var masterServiceName string = "kubernetes"
+
 // Get a list of pods that have data directories.
 func (kl *Kubelet) listPodsFromDisk() ([]types.UID, error) {
 	podInfos, err := ioutil.ReadDir(kl.getPodsDir())
@@ -387,8 +389,8 @@ func (kl *Kubelet) getServiceEnvVarMap(ns string) (map[string]string, error) {
 	// project the services in namespace ns onto the master services
 	for i := range services {
 		service := services[i]
-		// ignore services where ClusterIP is "None" or empty
-		if !v1helper.IsServiceIPSet(service) {
+		// ignore services where ClusterIP is "None" or empty but always add the master services
+		if !v1helper.IsServiceIPSet(service) && !(service.Namespace == kl.masterServiceNamespace && service.Name == masterServiceName) {
 			continue
 		}
 		serviceName := service.Name
