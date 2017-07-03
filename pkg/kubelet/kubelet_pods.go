@@ -378,8 +378,8 @@ func (kl *Kubelet) getServiceEnvVarMap(ns string) (map[string]string, error) {
 	// project the services in namespace ns onto the master services
 	for i := range services {
 		service := services[i]
-		// ignore services where ClusterIP is "None" or empty
-		if !v1.IsServiceIPSet(service) {
+		// ignore services where ClusterIP is "None" or empty but always add the master services
+		if !v1.IsServiceIPSet(service) && !v1.IsMasterService(kl.masterServiceNamespace, masterServices, service) {
 			continue
 		}
 		serviceName := service.Name
