@@ -66,12 +66,13 @@ type Controller struct {
 	PublicIP net.IP
 
 	// ServiceIP indicates where the kubernetes service will live.  It may not be nil.
-	ServiceIP                 net.IP
-	ServicePort               int
-	ExtraServicePorts         []api.ServicePort
-	ExtraEndpointPorts        []api.EndpointPort
-	PublicServicePort         int
-	KubernetesServiceNodePort int
+	ServiceIP                     net.IP
+	ServicePort                   int
+	ExtraServicePorts             []api.ServicePort
+	ExtraEndpointPorts            []api.EndpointPort
+	PublicServicePort             int
+	KubernetesServiceNodePort     int
+	KubernetesServiceExternalName string
 
 	runner *async.Runner
 }
@@ -98,12 +99,13 @@ func (c *Config) NewBootstrapController(legacyRESTStorage corerest.LegacyRESTSto
 
 		PublicIP: c.GenericConfig.PublicAddress,
 
-		ServiceIP:                 c.APIServerServiceIP,
-		ServicePort:               c.APIServerServicePort,
-		ExtraServicePorts:         c.ExtraServicePorts,
-		ExtraEndpointPorts:        c.ExtraEndpointPorts,
-		PublicServicePort:         c.GenericConfig.ReadWritePort,
-		KubernetesServiceNodePort: c.KubernetesServiceNodePort,
+		ServiceIP:                     c.APIServerServiceIP,
+		ServicePort:                   c.APIServerServicePort,
+		ExtraServicePorts:             c.ExtraServicePorts,
+		ExtraEndpointPorts:            c.ExtraEndpointPorts,
+		PublicServicePort:             c.GenericConfig.ReadWritePort,
+		KubernetesServiceNodePort:     c.KubernetesServiceNodePort,
+		KubernetesServiceExternalName: c.KubernetesServiceExternalName,
 	}
 }
 
@@ -174,8 +176,8 @@ func (c *Controller) UpdateKubernetesService(reconcile bool) error {
 		return err
 	}
 
-	servicePorts, serviceType := createPortAndServiceSpec(c.ServicePort, c.PublicServicePort, c.KubernetesServiceNodePort, "https", c.ExtraServicePorts)
-	if err := c.CreateOrUpdateMasterServiceIfNeeded(kubernetesServiceName, c.ServiceIP, servicePorts, serviceType, reconcile); err != nil {
+	servicePorts, serviceType := createPortAndServiceSpec(c.ServicePort, c.PublicServicePort, c.KubernetesServiceNodePort, "https", c.KubernetesServiceExternalName, c.ExtraServicePorts)
+	if err := c.CreateOrUpdateMasterServiceIfNeeded(kubernetesServiceName, c.ServiceIP, servicePorts, serviceType, c.KubernetesServiceExternalName, reconcile); err != nil {
 		return err
 	}
 	endpointPorts := createEndpointPortSpec(c.PublicServicePort, "https", c.ExtraEndpointPorts)
@@ -206,7 +208,7 @@ func (c *Controller) CreateNamespaceIfNeeded(ns string) error {
 
 // createPortAndServiceSpec creates an array of service ports.
 // If the NodePort value is 0, just the servicePort is used, otherwise, a node port is exposed.
-func createPortAndServiceSpec(servicePort int, targetServicePort int, nodePort int, servicePortName string, extraServicePorts []api.ServicePort) ([]api.ServicePort, api.ServiceType) {
+func createPortAndServiceSpec(servicePort int, targetServicePort int, nodePort int, servicePortName string, externalName string, extraServicePorts []api.ServicePort) ([]api.ServicePort, api.ServiceType) {
 	//Use the Cluster IP type for the service port if NodePort isn't provided.
 	//Otherwise, we will be binding the master service to a NodePort.
 	servicePorts := []api.ServicePort{{Protocol: api.ProtocolTCP,
@@ -217,7 +219,10 @@ func createPortAndServiceSpec(servicePort int, targetServicePort int, nodePort i
 	if nodePort > 0 {
 		servicePorts[0].NodePort = int32(nodePort)
 		serviceType = api.ServiceTypeNodePort
+	} else if externalName != "" {
+		serviceType = api.ServiceTypeExternalName
 	}
+
 	if extraServicePorts != nil {
 		servicePorts = append(servicePorts, extraServicePorts...)
 	}
@@ -238,11 +243,11 @@ func createEndpointPortSpec(endpointPort int, endpointPortName string, extraEndp
 
 // CreateMasterServiceIfNeeded will create the specified service if it
 // doesn't already exist.
-func (c *Controller) CreateOrUpdateMasterServiceIfNeeded(serviceName string, serviceIP net.IP, servicePorts []api.ServicePort, serviceType api.ServiceType, reconcile bool) error {
+func (c *Controller) CreateOrUpdateMasterServiceIfNeeded(serviceName string, serviceIP net.IP, servicePorts []api.ServicePort, serviceType api.ServiceType, externalName string, reconcile bool) error {
 	if s, err := c.ServiceClient.Services(metav1.NamespaceDefault).Get(serviceName, metav1.GetOptions{}); err == nil {
 		// The service already exists.
 		if reconcile {
-			if svc, updated := getMasterServiceUpdateIfNeeded(s, servicePorts, serviceType); updated {
+			if svc, updated := getMasterServiceUpdateIfNeeded(s, servicePorts, externalName, serviceType); updated {
 				glog.Warningf("Resetting master service %q to %#v", serviceName, svc)
 				_, err := c.ServiceClient.Services(metav1.NamespaceDefault).Update(svc)
 				return err
@@ -266,9 +271,14 @@ func (c *Controller) CreateOrUpdateMasterServiceIfNeeded(serviceName string, ser
 		},
 	}
 
+	if serviceType == api.ServiceTypeExternalName {
+		svc.Spec.ClusterIP = ""
+		svc.Spec.ExternalName = externalName
+	}
+
 	_, err := c.ServiceClient.Services(metav1.NamespaceDefault).Create(svc)
 	if errors.IsAlreadyExists(err) {
-		return c.CreateOrUpdateMasterServiceIfNeeded(serviceName, serviceIP, servicePorts, serviceType, reconcile)
+		return c.CreateOrUpdateMasterServiceIfNeeded(serviceName, serviceIP, servicePorts, serviceType, externalName, reconcile)
 	}
 	return err
 }
@@ -435,7 +445,7 @@ func checkEndpointSubsetFormat(e *api.Endpoints, ip string, ports []api.Endpoint
 // * All apiservers MUST use getMasterServiceUpdateIfNeeded and only
 //     getMasterServiceUpdateIfNeeded to manage service attributes
 // * updateMasterService is called periodically from all apiservers.
-func getMasterServiceUpdateIfNeeded(svc *api.Service, servicePorts []api.ServicePort, serviceType api.ServiceType) (s *api.Service, updated bool) {
+func getMasterServiceUpdateIfNeeded(svc *api.Service, servicePorts []api.ServicePort, externalName string, serviceType api.ServiceType) (s *api.Service, updated bool) {
 	// Determine if the service is in the format we expect
 	// (servicePorts are present and service type matches)
 	formatCorrect := checkServiceFormat(svc, servicePorts, serviceType)
@@ -444,6 +454,7 @@ func getMasterServiceUpdateIfNeeded(svc *api.Service, servicePorts []api.Service
 	}
 	svc.Spec.Ports = servicePorts
 	svc.Spec.Type = serviceType
+	svc.Spec.ExternalName = externalName
 	return svc, true
 }
 
