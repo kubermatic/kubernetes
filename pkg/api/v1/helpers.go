@@ -67,6 +67,16 @@ func NewUIDPreconditions(uid string) *Preconditions {
 	return &Preconditions{UID: &u}
 }
 
+// IsMasterService will check of the given service is a master service
+func IsMasterService(masterNamespace string, masterServices sets.String, service *Service) bool {
+	for s, _ := range masterServices {
+		if service.Namespace == masterNamespace && s == service.Name {
+			return true
+		}
+	}
+	return false
+}
+
 // this function aims to check if the service's ClusterIP is set or not
 // the objective is not to perform validation here
 func IsServiceIPSet(service *Service) bool {
