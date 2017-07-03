@@ -551,11 +551,12 @@ func TestCreateOrUpdateMasterService(t *testing.T) {
 		testName     string
 		serviceName  string
 		servicePorts []api.ServicePort
+		ExternalName string
 		serviceType  api.ServiceType
 		expectCreate *api.Service // nil means none expected
 	}{
 		{
-			testName:    "service does not exist",
+			testName:    "service does not exist - ClusterIP",
 			serviceName: "foo",
 			servicePorts: []api.ServicePort{
 				{Name: "foo", Port: 8080, Protocol: "TCP", TargetPort: intstr.FromInt(8080)},
@@ -574,12 +575,53 @@ func TestCreateOrUpdateMasterService(t *testing.T) {
 				},
 			},
 		},
+		{
+			testName:    "service does not exist - NodePort",
+			serviceName: "foo",
+			servicePorts: []api.ServicePort{
+				{Name: "foo", Port: 443, Protocol: "TCP", TargetPort: intstr.FromInt(30000), NodePort: 30000},
+			},
+			serviceType: api.ServiceTypeNodePort,
+			expectCreate: &api.Service{
+				ObjectMeta: om("foo"),
+				Spec: api.ServiceSpec{
+					Ports: []api.ServicePort{
+						{Name: "foo", Port: 443, Protocol: "TCP", TargetPort: intstr.FromInt(30000), NodePort: 30000},
+					},
+					Selector:        nil,
+					ClusterIP:       "1.2.3.4",
+					SessionAffinity: api.ServiceAffinityClientIP,
+					Type:            api.ServiceTypeNodePort,
+				},
+			},
+		},
+		{
+			testName:    "service does not exist - ExternalName",
+			serviceName: "foo",
+			servicePorts: []api.ServicePort{
+				{Name: "foo", Port: 443, Protocol: "TCP"},
+			},
+			serviceType:  api.ServiceTypeExternalName,
+			ExternalName: "foo.bar",
+			expectCreate: &api.Service{
+				ObjectMeta: om("foo"),
+				Spec: api.ServiceSpec{
+					Ports: []api.ServicePort{
+						{Name: "foo", Port: 443, Protocol: "TCP"},
+					},
+					Selector:        nil,
+					ExternalName:    "foo.bar",
+					SessionAffinity: api.ServiceAffinityClientIP,
+					Type:            api.ServiceTypeExternalName,
+				},
+			},
+		},
 	}
 	for _, test := range create_tests {
 		master := Controller{}
 		fakeClient := fake.NewSimpleClientset()
 		master.ServiceClient = fakeClient.Core()
-		master.CreateOrUpdateMasterServiceIfNeeded(test.serviceName, net.ParseIP("1.2.3.4"), test.servicePorts, test.serviceType, false)
+		master.CreateOrUpdateMasterServiceIfNeeded(test.serviceName, net.ParseIP("1.2.3.4"), test.servicePorts, test.serviceType, test.ExternalName, false)
 		creates := []core.CreateAction{}
 		for _, action := range fakeClient.Actions() {
 			if action.GetVerb() == "create" {
@@ -861,7 +903,7 @@ func TestCreateOrUpdateMasterService(t *testing.T) {
 		master := Controller{}
 		fakeClient := fake.NewSimpleClientset(test.service)
 		master.ServiceClient = fakeClient.Core()
-		err := master.CreateOrUpdateMasterServiceIfNeeded(test.serviceName, net.ParseIP("1.2.3.4"), test.servicePorts, test.serviceType, true)
+		err := master.CreateOrUpdateMasterServiceIfNeeded(test.serviceName, net.ParseIP("1.2.3.4"), test.servicePorts, test.serviceType, "", true)
 		if err != nil {
 			t.Errorf("case %q: unexpected error: %v", test.testName, err)
 		}
@@ -920,7 +962,7 @@ func TestCreateOrUpdateMasterService(t *testing.T) {
 		master := Controller{}
 		fakeClient := fake.NewSimpleClientset(test.service)
 		master.ServiceClient = fakeClient.Core()
-		err := master.CreateOrUpdateMasterServiceIfNeeded(test.serviceName, net.ParseIP("1.2.3.4"), test.servicePorts, test.serviceType, false)
+		err := master.CreateOrUpdateMasterServiceIfNeeded(test.serviceName, net.ParseIP("1.2.3.4"), test.servicePorts, test.serviceType, "", false)
 		if err != nil {
 			t.Errorf("case %q: unexpected error: %v", test.testName, err)
 		}
