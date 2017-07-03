@@ -59,26 +59,6 @@ func TestFromServices(t *testing.T) {
 				},
 			},
 		},
-		{
-			ObjectMeta: metav1.ObjectMeta{Name: "svrc-clusterip-none"},
-			Spec: v1.ServiceSpec{
-				Selector:  map[string]string{"bar": "baz"},
-				ClusterIP: "None",
-				Ports: []v1.ServicePort{
-					{Port: 8082, Protocol: "TCP"},
-				},
-			},
-		},
-		{
-			ObjectMeta: metav1.ObjectMeta{Name: "svrc-clusterip-empty"},
-			Spec: v1.ServiceSpec{
-				Selector:  map[string]string{"bar": "baz"},
-				ClusterIP: "",
-				Ports: []v1.ServicePort{
-					{Port: 8082, Protocol: "TCP"},
-				},
-			},
-		},
 	}
 	vars := envvars.FromServices(sl)
 	expected := []v1.EnvVar{
