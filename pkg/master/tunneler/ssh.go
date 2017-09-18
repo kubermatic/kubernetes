@@ -162,7 +162,8 @@ func (c *SSHTunneler) SecondsSinceSSHKeySync() int64 {
 func (c *SSHTunneler) installSSHKeySyncLoop(user, publicKeyfile string) {
 	go wait.Until(func() {
 		if c.InstallSSHKey == nil {
-			glog.Error("Won't attempt to install ssh key: InstallSSHKey function is nil")
+			atomic.StoreInt64(&c.lastSSHKeySync, c.clock.Now().Unix())
+			glog.Info("Won't attempt to install ssh key: InstallSSHKey function is nil")
 			return
 		}
 		key, err := ssh.ParsePublicKeyFromFile(publicKeyfile)
