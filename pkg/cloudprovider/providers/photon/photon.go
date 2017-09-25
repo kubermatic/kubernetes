@@ -25,7 +25,6 @@ package photon
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -429,11 +428,11 @@ func (pc *PCCloud) NodeAddresses(nodeName k8stypes.NodeName) ([]v1.NodeAddress, 
 // This method will not be called from the node that is requesting this ID. i.e. metadata service
 // and other local methods cannot be used here
 func (pc *PCCloud) NodeAddressesByProviderID(providerID string) ([]v1.NodeAddress, error) {
-	return []v1.NodeAddress{}, errors.New("unimplemented")
+	return []v1.NodeAddress{}, cloudprovider.NotImplemented
 }
 
 func (pc *PCCloud) AddSSHKeyToAllInstances(user string, keyData []byte) error {
-	return errors.New("unimplemented")
+	return cloudprovider.NotImplemented
 }
 
 func (pc *PCCloud) CurrentNodeName(hostname string) (k8stypes.NodeName, error) {
@@ -499,7 +498,7 @@ func (pc *PCCloud) InstanceID(nodeName k8stypes.NodeName) (string, error) {
 // This method will not be called from the node that is requesting this ID. i.e. metadata service
 // and other local methods cannot be used here
 func (pc *PCCloud) InstanceTypeByProviderID(providerID string) (string, error) {
-	return "", errors.New("unimplemented")
+	return "", cloudprovider.NotImplemented
 }
 
 func (pc *PCCloud) InstanceType(nodeName k8stypes.NodeName) (string, error) {

@@ -585,7 +585,7 @@ func (vs *VSphere) NodeAddressesByProviderID(providerID string) ([]v1.NodeAddres
 }
 
 func (vs *VSphere) AddSSHKeyToAllInstances(user string, keyData []byte) error {
-	return errors.New("unimplemented")
+	return cloudprovider.NotImplemented
 }
 
 func (vs *VSphere) CurrentNodeName(hostname string) (k8stypes.NodeName, error) {
