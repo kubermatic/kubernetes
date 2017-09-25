@@ -88,7 +88,7 @@ func (i *Instances) CurrentNodeName(hostname string) (types.NodeName, error) {
 }
 
 func (i *Instances) AddSSHKeyToAllInstances(user string, keyData []byte) error {
-	return errors.New("unimplemented")
+	return cloudprovider.NotImplemented
 }
 
 func (i *Instances) NodeAddresses(name types.NodeName) ([]v1.NodeAddress, error) {
