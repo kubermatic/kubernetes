@@ -577,7 +577,7 @@ func newEc2Filter(name string, values ...string) *ec2.Filter {
 
 // AddSSHKeyToAllInstances is currently not implemented.
 func (c *Cloud) AddSSHKeyToAllInstances(user string, keyData []byte) error {
-	return errors.New("unimplemented")
+	return cloudprovider.NotImplemented
 }
 
 // CurrentNodeName returns the name of the current node
