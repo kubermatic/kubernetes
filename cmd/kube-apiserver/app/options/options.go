@@ -65,6 +65,7 @@ type ServerRunOptions struct {
 	ServiceNodePortRange      utilnet.PortRange
 	SSHKeyfile                string
 	SSHUser                   string
+	SSHPreferredAddressTypes  []string
 
 	ProxyClientCertFile string
 	ProxyClientKeyFile  string
@@ -109,7 +110,8 @@ func NewServerRunOptions() *ServerRunOptions {
 			EnableHttps: true,
 			HTTPTimeout: time.Duration(5) * time.Second,
 		},
-		ServiceNodePortRange: DefaultServiceNodePortRange,
+		ServiceNodePortRange:     DefaultServiceNodePortRange,
+		SSHPreferredAddressTypes: []string{string(api.NodeExternalIP)},
 	}
 	// Overwrite the default for storage data format.
 	s.Etcd.DefaultStorageMediaType = "application/vnd.kubernetes.protobuf"
@@ -153,6 +155,9 @@ func (s *ServerRunOptions) AddFlags(fs *pflag.FlagSet) {
 
 	fs.StringVar(&s.SSHKeyfile, "ssh-keyfile", s.SSHKeyfile,
 		"If non-empty, use secure SSH proxy to the nodes, using this user keyfile")
+
+	fs.StringSliceVar(&s.SSHPreferredAddressTypes, "ssh-preferred-address-types", s.SSHPreferredAddressTypes,
+		"List of the preferred NodeAddressTypes to use for SSH Proxy.")
 
 	fs.Int64Var(&s.MaxConnectionBytesPerSec, "max-connection-bytes-per-sec", s.MaxConnectionBytesPerSec, ""+
 		"If non-zero, throttle each user connection to this number of bytes/sec. "+
