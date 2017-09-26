@@ -304,7 +304,7 @@ func (m *Master) InstallLegacyAPI(c *Config, restOptionsGetter generic.RESTOptio
 }
 
 func (m *Master) installTunneler(nodeTunneler tunneler.Tunneler, nodeClient corev1client.NodeInterface) {
-	nodeTunneler.Run(nodeAddressProvider{nodeClient}.externalAddresses)
+	nodeTunneler.Run(nodeAddressProvider{nodeClient}.getPreferredAddresses)
 	m.GenericAPIServer.AddHealthzChecks(healthz.NamedCheck("SSH Tunnel Check", tunneler.TunnelSyncHealthChecker(nodeTunneler)))
 }
 
@@ -355,10 +355,12 @@ type nodeAddressProvider struct {
 	nodeClient corev1client.NodeInterface
 }
 
-func (n nodeAddressProvider) externalAddresses() ([]string, error) {
-	preferredAddressTypes := []apiv1.NodeAddressType{
-		apiv1.NodeExternalIP,
+func (n nodeAddressProvider) getPreferredAddresses(preferredAddresses []string) ([]string, error) {
+	preferredAddressTypes := []apiv1.NodeAddressType{}
+	for _, v := range preferredAddresses {
+		preferredAddressTypes = append(preferredAddressTypes, apiv1.NodeAddressType(v))
 	}
+
 	nodes, err := n.nodeClient.List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err

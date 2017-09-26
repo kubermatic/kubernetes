@@ -38,7 +38,7 @@ import (
 
 type InstallSSHKey func(user string, data []byte) error
 
-type AddressFunc func() (addresses []string, err error)
+type AddressFunc func(preferredAddresses []string) (addresses []string, err error)
 
 type Tunneler interface {
 	Run(AddressFunc)
@@ -64,10 +64,11 @@ type SSHTunneler struct {
 	lastSync       int64 // Seconds since Epoch
 	lastSSHKeySync int64 // Seconds since Epoch
 
-	SSHUser        string
-	SSHKeyfile     string
-	InstallSSHKey  InstallSSHKey
-	HealthCheckURL *url.URL
+	SSHUser                   string
+	SSHKeyfile                string
+	NodePreferredAddressTypes []string
+	InstallSSHKey             InstallSSHKey
+	HealthCheckURL            *url.URL
 
 	tunnels        *ssh.SSHTunnelList
 	lastSyncMetric prometheus.GaugeFunc
@@ -77,13 +78,14 @@ type SSHTunneler struct {
 	stopChan     chan struct{}
 }
 
-func New(sshUser, sshKeyfile string, healthCheckURL *url.URL, installSSHKey InstallSSHKey) Tunneler {
+func New(sshUser, sshKeyfile string, healthCheckURL *url.URL, installSSHKey InstallSSHKey, nodePreferredAddressTypes []string) Tunneler {
 	return &SSHTunneler{
-		SSHUser:        sshUser,
-		SSHKeyfile:     sshKeyfile,
-		InstallSSHKey:  installSSHKey,
-		HealthCheckURL: healthCheckURL,
-		clock:          clock.RealClock{},
+		SSHUser:                   sshUser,
+		SSHKeyfile:                sshKeyfile,
+		NodePreferredAddressTypes: nodePreferredAddressTypes,
+		InstallSSHKey:             installSSHKey,
+		HealthCheckURL:            healthCheckURL,
+		clock:                     clock.RealClock{},
 	}
 }
 
@@ -185,7 +187,7 @@ func (c *SSHTunneler) installSSHKeySyncLoop(user, publicKeyfile string) {
 func (c *SSHTunneler) nodesSyncLoop() {
 	// TODO (cjcullen) make this watch.
 	go wait.Until(func() {
-		addrs, err := c.getAddresses()
+		addrs, err := c.getAddresses(c.NodePreferredAddressTypes)
 		glog.V(4).Infof("Calling update w/ addrs: %v", addrs)
 		if err != nil {
 			glog.Errorf("Failed to getAddresses: %v", err)
